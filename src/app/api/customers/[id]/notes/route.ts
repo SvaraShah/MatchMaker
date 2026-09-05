@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
-import { getCustomerById, saveCustomer } from '@/lib/db';
-import { Note, TimelineEvent, JourneyStatus } from '@/types/matchmaker';
+import { prisma } from '@/lib/prisma';
+import { getSessionUser } from '@/lib/auth';
+import { serializeAdminView } from '@/lib/serializers';
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getSessionUser();
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { author, content, status } = body;
@@ -15,25 +21,28 @@ export async function POST(
       return NextResponse.json({ error: 'Author and Content are required' }, { status: 400 });
     }
 
-    const customer = getCustomerById(id);
+    const customer = await prisma.customer.findUnique({
+      where: { id },
+    });
+
     if (!customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     }
 
-    const now = new Date().toISOString();
-    const noteId = `note-${Date.now()}`;
-    const newNote: Note = {
-      id: noteId,
-      author,
-      content,
-      createdAt: now
-    };
+    const now = new Date();
 
-    // Update notes
-    customer.notes = [newNote, ...customer.notes];
+    // 1. Add Note
+    await prisma.note.create({
+      data: {
+        customerId: id,
+        author,
+        content,
+        createdAt: now,
+      },
+    });
 
-    // Determine type of event based on keywords in content
-    let eventType: TimelineEvent['type'] = 'note_added';
+    // 2. Determine Timeline Event Type
+    let eventType = 'note_added';
     let eventTitle = 'Note Added';
     const lowerContent = content.toLowerCase();
     
@@ -45,22 +54,19 @@ export async function POST(
       eventTitle = 'Meeting Outcome Recorded';
     }
 
-    // Append note timeline event
-    customer.timeline.push({
-      id: `evt-${Date.now()}-note`,
-      type: eventType,
-      title: eventTitle,
-      description: `Note by ${author}: "${content.substring(0, 60)}${content.length > 60 ? '...' : ''}"`,
-      createdAt: now
+    await prisma.timelineEvent.create({
+      data: {
+        customerId: id,
+        type: eventType,
+        title: eventTitle,
+        description: `Note by ${author}: "${content.substring(0, 60)}${content.length > 60 ? '...' : ''}"`,
+        createdAt: now,
+      },
     });
 
-    // If journey status is being updated
+    // 3. Update Journey Status if changed
     if (status && status !== customer.journeyStatus) {
-      const oldStatus = customer.journeyStatus;
-      customer.journeyStatus = status as JourneyStatus;
-      
-      // Map journey status to event type
-      let statusEvtType: TimelineEvent['type'] = 'status_changed';
+      let statusEvtType = 'status_changed';
       if (status === 'Profile Verified') statusEvtType = 'profile_verified';
       else if (status === 'Match Search') statusEvtType = 'match_search';
       else if (status === 'Match Sent') statusEvtType = 'match_sent';
@@ -68,27 +74,40 @@ export async function POST(
       else if (status === 'Active Discussion') statusEvtType = 'active_discussion';
       else if (status === 'Success') statusEvtType = 'success';
 
-      customer.timeline.push({
-        id: `evt-${Date.now()}-status`,
-        type: statusEvtType,
-        title: `Status Changed: ${status}`,
-        description: `Journey status updated from "${oldStatus}" to "${status}".`,
-        createdAt: now
+      await prisma.timelineEvent.create({
+        data: {
+          customerId: id,
+          type: statusEvtType,
+          title: `Status Changed: ${status}`,
+          description: `Journey status updated from "${customer.journeyStatus}" to "${status}".`,
+          createdAt: now,
+        },
+      });
+
+      await prisma.customer.update({
+        where: { id },
+        data: {
+          journeyStatus: status,
+          lastUpdated: now,
+        },
+      });
+    } else {
+      await prisma.customer.update({
+        where: { id },
+        data: { lastUpdated: now },
       });
     }
 
-    // Sort timeline so newest is first or chronologically ordered
-    // We sort chronologically so that progress reads left-to-right/top-to-bottom, or reverse.
-    // Let's sort chronologically by default
-    customer.timeline.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    customer.lastUpdated = now;
+    const updatedCustomer = await prisma.customer.findUnique({
+      where: { id },
+      include: {
+        preference: true,
+        notes: { orderBy: { createdAt: 'desc' } },
+        timeline: { orderBy: { createdAt: 'desc' } },
+      },
+    });
 
-    const success = saveCustomer(customer);
-    if (!success) {
-      return NextResponse.json({ error: 'Failed to save notes' }, { status: 500 });
-    }
-
-    return NextResponse.json(customer);
+    return NextResponse.json(serializeAdminView(updatedCustomer));
   } catch (error) {
     console.error('API Add Note error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

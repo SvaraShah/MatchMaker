@@ -1,56 +1,89 @@
 import { NextResponse } from 'next/server';
-import { getCustomerById, getCustomers, getMatchStates } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
+import { getSessionUser } from '@/lib/auth';
 import { getTopMatches } from '@/lib/matchingEngine';
-import { generateAIMatchPitches } from '@/lib/openai';
-import { MatchRecommendation } from '@/types/matchmaker';
+import { generateAIMatchPitches } from '@/lib/ai/matchAnalysis';
+import { serializeAdminView } from '@/lib/serializers';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getSessionUser();
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
-    const client = getCustomerById(id);
-    if (!client) {
+    const clientCustomer = await prisma.customer.findUnique({
+      where: { id },
+      include: { preference: true },
+    });
+
+    if (!clientCustomer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     }
 
-    const pool = getCustomers();
-    const matchStates = getMatchStates();
+    const allCustomers = await prisma.customer.findMany({
+      include: { preference: true },
+    });
 
-    // Get Top 10 matches from rule-based engine
-    const topScored = getTopMatches(client, pool, 10);
+    const clientAdminView = serializeAdminView(clientCustomer) as any;
+    const allAdminViews = allCustomers.map((c: any) => serializeAdminView(c) as any);
 
-    const recommendations: MatchRecommendation[] = [];
+    // Compute top matches
+    const topScored = getTopMatches(clientAdminView, allAdminViews, 10);
 
-    // For each top match, merge with saved state and generate AI text
+    const matchRecords = await prisma.match.findMany({
+      where: { customerId: id },
+    });
+    const matchMap = new Map(matchRecords.map((m: any) => [m.candidateId, m]));
+
+    const recommendations = [];
+
     for (const item of topScored) {
       const prospect = item.profile;
-      
-      // Find if we already have a saved action status or cached AI text
-      const existingState = matchStates.find(
-        m => m.customerId === client.id && m.matchId === prospect.id
-      );
+      const existingMatch = matchMap.get(prospect.id) as any;
 
-      let aiExplanation = '';
-      let aiIntroduction = '';
+      let aiExplanation = existingMatch?.aiExplanation || '';
+      let aiIntroduction = existingMatch?.aiIntroduction || '';
 
-      if (existingState?.aiExplanation && existingState?.aiIntroduction) {
-        // Use cached values if available
-        aiExplanation = existingState.aiExplanation;
-        aiIntroduction = existingState.aiIntroduction;
-      } else {
-        // Generate new values (calls OpenAI or fallback)
-        const pitch = await generateAIMatchPitches(client, prospect, item.score);
+      if (!aiExplanation || !aiIntroduction) {
+        const pitch = await generateAIMatchPitches(clientAdminView, prospect, item.score);
         aiExplanation = pitch.aiExplanation;
         aiIntroduction = pitch.aiIntroduction;
+
+        // Cache into DB
+        await prisma.match.upsert({
+          where: {
+            customerId_candidateId: {
+              customerId: id,
+              candidateId: prospect.id,
+            },
+          },
+          update: {
+            compatibilityScore: item.score,
+            scoreBreakdown: JSON.stringify(item.scoreBreakdown),
+            aiExplanation,
+            aiIntroduction,
+          },
+          create: {
+            customerId: id,
+            candidateId: prospect.id,
+            compatibilityScore: item.score,
+            scoreBreakdown: JSON.stringify(item.scoreBreakdown),
+            aiExplanation,
+            aiIntroduction,
+          },
+        }).catch(() => {});
       }
 
       recommendations.push({
         ...item,
         aiExplanation,
         aiIntroduction,
-        status: existingState?.status // saved, rejected, sent, or undefined
+        status: existingMatch?.status,
       });
     }
 

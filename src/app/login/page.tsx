@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Heart, Lock, Mail, Loader2, Sparkles } from 'lucide-react';
+import { Heart, Lock, Mail, Loader2, Sparkles, ShieldCheck, UserCheck } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,8 +12,14 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleDemoFill = () => {
+  const handleAdminFill = () => {
     setEmail('matchmaker@tdc.com');
+    setPassword('password123');
+    setError('');
+  };
+
+  const handleUserFill = () => {
+    setEmail('ruksana.trivedi@example.com');
     setPassword('password123');
     setError('');
   };
@@ -39,9 +45,12 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Redirect to dashboard
         router.refresh();
-        router.push('/dashboard');
+        if (data.user?.role === 'ADMIN') {
+          router.push('/admin');
+        } else {
+          router.push('/app');
+        }
       } else {
         setError(data.error || 'Authentication failed. Please check your credentials.');
         setLoading(false);
@@ -55,28 +64,28 @@ export default function LoginPage() {
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-50 p-4 dark:bg-slate-950 transition-colors duration-300">
-      {/* Decorative background blurs */}
+      {/* Background blurs */}
       <div className="absolute top-[-20%] left-[-20%] h-[60%] w-[60%] rounded-full bg-primary/5 blur-[120px] dark:bg-primary/10" />
       <div className="absolute bottom-[-20%] right-[-20%] h-[60%] w-[60%] rounded-full bg-rose-400/5 blur-[120px] dark:bg-rose-400/10" />
 
       <div className="w-full max-w-md">
-        {/* Portal Header */}
+        {/* Header */}
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/20 ring-4 ring-primary/10">
             <Heart className="h-6 w-6 text-white animate-pulse" fill="currentColor" />
           </div>
           <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            TDC Matchmaker Portal
+            TDC Matrimony Platform
           </h1>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            AI-Powered CRM & Matchmaking Engine
+            Two-Sided Matchmaking Platform & CRM Engine
           </p>
         </div>
 
-        {/* Login Form Card */}
+        {/* Card */}
         <div className="glass-panel rounded-3xl p-8 shadow-xl">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Welcome back</h2>
-          <p className="mb-6 text-xs text-slate-400">Sign in to manage client relations and explore AI pairings.</p>
+          <p className="mb-6 text-xs text-slate-400">Sign in to access your matrimonial dashboard or matchmaker portal.</p>
 
           {error && (
             <div className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs font-medium text-destructive animate-pulse-slow">
@@ -97,7 +106,7 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="matchmaker@tdc.com"
+                  placeholder="name@example.com"
                   className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-border bg-background/50 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                   required
                   disabled={loading}
@@ -128,7 +137,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="relative flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-md shadow-primary/10 hover:bg-primary/95 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:scale-[0.98] transition-all disabled:opacity-75 disabled:pointer-events-none"
+              className="relative flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-md shadow-primary/10 hover:bg-primary/95 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:scale-[0.98] transition-all disabled:opacity-75 disabled:pointer-events-none cursor-pointer"
             >
               {loading ? (
                 <>
@@ -141,23 +150,37 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Demo Credentials Helper */}
-          <div className="mt-6 border-t border-border pt-6">
-            <button
-              type="button"
-              onClick={handleDemoFill}
-              disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-slate-100/30 dark:bg-slate-900/30 hover:bg-slate-100/70 dark:hover:bg-slate-900/70 text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white py-3.5 px-4 font-medium transition-all"
-            >
-              <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-              <span>Use Demo Credentials</span>
-            </button>
+          {/* Quick Demo Login Triggers */}
+          <div className="mt-6 border-t border-border pt-6 space-y-2">
+            <span className="block text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              Development Demo Login Options
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={handleAdminFill}
+                disabled={loading}
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 text-xs text-primary py-2.5 px-3 font-medium transition-all cursor-pointer"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                <span>Admin Demo</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleUserFill}
+                disabled={loading}
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-rose-400/30 bg-rose-500/5 hover:bg-rose-500/10 text-xs text-rose-600 dark:text-rose-400 py-2.5 px-3 font-medium transition-all cursor-pointer"
+              >
+                <UserCheck className="h-4 w-4" />
+                <span>User Demo</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Footer */}
         <p className="mt-8 text-center text-xs text-slate-400">
-          Authorized personnel only. Logs monitored.
+          Two-Sided Platform • Secure HTTP-Only Sessions
         </p>
       </div>
     </main>

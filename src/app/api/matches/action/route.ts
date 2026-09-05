@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getCustomerById, saveCustomer, saveMatchState } from '@/lib/db';
-import { TimelineEvent, Note } from '@/types/matchmaker';
+import { prisma } from '@/lib/prisma';
+import { getSessionUser } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
+    const session = await getSessionUser();
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { customerId, matchId, status, aiExplanation, aiIntroduction } = body;
 
@@ -11,56 +16,86 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'customerId, matchId, and status are required' }, { status: 400 });
     }
 
-    if (!['saved', 'rejected', 'sent'].includes(status)) {
+    if (!['saved', 'rejected', 'sent', 'viewed', 'accepted', 'declined'].includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
 
-    // Save match state (this persists the decision and caches the AI text)
-    const success = saveMatchState({
-      customerId,
-      matchId,
-      status,
-      aiExplanation,
-      aiIntroduction
+    // Save or update match state
+    const matchRecord = await prisma.match.upsert({
+      where: {
+        customerId_candidateId: {
+          customerId,
+          candidateId: matchId,
+        },
+      },
+      update: {
+        status,
+        aiExplanation: aiExplanation || undefined,
+        aiIntroduction: aiIntroduction || undefined,
+        updatedAt: new Date(),
+      },
+      create: {
+        customerId,
+        candidateId: matchId,
+        compatibilityScore: body.score || 80,
+        scoreBreakdown: JSON.stringify(body.scoreBreakdown || {}),
+        aiExplanation: aiExplanation || null,
+        aiIntroduction: aiIntroduction || null,
+        status,
+      },
     });
 
-    if (!success) {
-      return NextResponse.json({ error: 'Failed to record match action' }, { status: 500 });
-    }
+    // Create Audit Log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.userId,
+        action: `MATCH_${status.toUpperCase()}`,
+        entityType: 'Match',
+        entityId: matchRecord.id,
+        metadata: JSON.stringify({ customerId, candidateId: matchId }),
+      },
+    });
 
-    // Special behavior if sending a match: record to customer timeline and change journey status
+    // Special behavior if sending match: update timeline and customer status
     if (status === 'sent') {
-      const customer = getCustomerById(customerId);
-      const prospect = getCustomerById(matchId);
-      
+      const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+      const prospect = await prisma.customer.findUnique({ where: { id: matchId } });
+
       if (customer && prospect) {
-        const now = new Date().toISOString();
-        
-        // Update customer's journey status to 'Match Sent' if they are in 'Match Search' or below
+        const now = new Date();
         const prevStatus = customer.journeyStatus;
-        if (customer.journeyStatus === 'New Lead' || customer.journeyStatus === 'Profile Verified' || customer.journeyStatus === 'Match Search') {
-          customer.journeyStatus = 'Match Sent';
+
+        let newJourneyStatus = customer.journeyStatus;
+        if (['New Lead', 'Profile Verified', 'Match Search'].includes(prevStatus)) {
+          newJourneyStatus = 'Match Sent';
         }
 
-        // Add timeline event
-        customer.timeline.push({
-          id: `evt-${Date.now()}-matchsent-${matchId}`,
-          type: 'match_sent',
-          title: `Match Proposal Sent: ${prospect.firstName} ${prospect.lastName}`,
-          description: `AI-curated proposal (Score: ${body.score || 'N/A'}%) shared with client via email.`,
-          createdAt: now
+        await prisma.timelineEvent.create({
+          data: {
+            customerId,
+            type: 'match_sent',
+            title: `Match Proposal Sent: ${prospect.firstName} ${prospect.lastName}`,
+            description: `AI-curated proposal (Score: ${body.score || 'N/A'}%) shared with client.`,
+            createdAt: now,
+          },
         });
 
-        // Add automated note
-        customer.notes.unshift({
-          id: `note-${Date.now()}-matchsent-${matchId}`,
-          author: 'System (AI Matchmaker)',
-          content: `Sent match proposal of ${prospect.firstName} ${prospect.lastName} (${prospect.profession.designation}, ${prospect.city}). Score: ${body.score || 'N/A'}%. Reason: ${aiExplanation || 'Shared via email'}`,
-          createdAt: now
+        await prisma.note.create({
+          data: {
+            customerId,
+            author: 'System (AI Matchmaker)',
+            content: `Sent match proposal of ${prospect.firstName} ${prospect.lastName} (${prospect.designation}, ${prospect.city}). Score: ${body.score || 'N/A'}%. Reason: ${aiExplanation || 'Shared via email'}`,
+            createdAt: now,
+          },
         });
 
-        customer.lastUpdated = now;
-        saveCustomer(customer);
+        await prisma.customer.update({
+          where: { id: customerId },
+          data: {
+            journeyStatus: newJourneyStatus,
+            lastUpdated: now,
+          },
+        });
       }
     }
 

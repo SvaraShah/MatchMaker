@@ -1,0 +1,301 @@
+// Prisma Schema for Two-Sided Marriage-Bureau Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  customer         Customer?
+  shortlists       Shortlist[]    @relation("UserShortlists")
+  sentRequests     MatchRequest[] @relation("SentMatchRequests")
+  receivedRequests MatchRequest[] @relation("ReceivedMatchRequests")
+  auditLogs        AuditLog[]
+
+  conversationsA   Conversation[] @relation("ParticipantA")
+  conversationsB   Conversation[] @relation("ParticipantB")
+  sentMessages     Message[]      @relation("SentMessages")
+  notifications    Notification[]
+
+  @@map("users")
+}
+
+model Customer {
+  id                String   @id @default(cuid())
+  userId            String?  @unique
+  user              User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  firstName         String
+  lastName          String
+  gender            String   // 'Male' | 'Female'
+  dob               String   // ISO date
+  age               Int
+  country           String   @default("India")
+  city              String
+  height            Int      // in cm
+  religion          String
+  caste             String
+  motherTongue      String
+  languagesKnown   String   // Stored as JSON string array
+  email             String
+  phone             String
+  
+  photoUrl          String?  // Custom avatar/photo URL
+  aboutMe           String?  @db.Text // Personalized matrimonial bio
+
+  // Education Info
+  undergradCollege  String
+  degree            String
+  postgradDegree    String?
+  
+  // Profession Info
+  company           String
+  designation       String
+  income            Int      // in LPA
+  industry          String
+  
+  // Family Info
+  siblings          Int      @default(0)
+  familyType        String   // 'Joint' | 'Nuclear'
+  parentsOccupation String
+  
+  // Lifestyle Info
+  smoking           String   // 'No' | 'Occasionally' | 'Yes'
+  drinking          String   // 'No' | 'Occasionally' | 'Yes'
+  diet              String   // 'Vegetarian' | 'Non-Vegetarian' | 'Eggetarian'
+  openToPets        Boolean  @default(false)
+  
+  journeyStatus     String   @default("New Lead")
+  lastUpdated       DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  preference        CustomerPreference?
+  notes             Note[]
+  timeline          TimelineEvent[]
+  followUps         FollowUp[]
+  
+  matchesAsClient    Match[] @relation("MatchesAsClient")
+  matchesAsCandidate Match[] @relation("MatchesAsCandidate")
+
+  @@index([gender])
+  @@index([city])
+  @@index([religion])
+  @@index([journeyStatus])
+  @@map("customers")
+}
+
+model CustomerPreference {
+  id                String   @id @default(cuid())
+  customerId        String   @unique
+  customer          Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  ageMin            Int      @default(18)
+  ageMax            Int      @default(70)
+  locations         String   // Stored as JSON string array
+  religions         String   // Stored as JSON string array
+  castes            String   // Stored as JSON string array
+  wantKids          String   @default("Open") // 'Yes' | 'No' | 'Open'
+  openToRelocate    String   @default("Depends") // 'Yes' | 'No' | 'Depends'
+  horoscopeRequired Boolean  @default(false)
+  manglikStatus     String   @default("Any") // 'Manglik' | 'Non-Manglik' | 'Any'
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("customer_preferences")
+}
+
+model Match {
+  id                 String   @id @default(cuid())
+  customerId         String
+  customer           Customer @relation("MatchesAsClient", fields: [customerId], references: [id], onDelete: Cascade)
+  
+  candidateId        String
+  candidate          Customer @relation("MatchesAsCandidate", fields: [candidateId], references: [id], onDelete: Cascade)
+  
+  compatibilityScore Int
+  scoreBreakdown     String   // Stored as JSON string object
+  aiExplanation      String?  @db.Text
+  aiIntroduction     String?  @db.Text
+  status             String   @default("suggested") // 'suggested', 'saved', 'rejected', 'sent', 'viewed', 'accepted', 'declined'
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  followUps          FollowUp[]
+
+  @@unique([customerId, candidateId])
+  @@index([customerId])
+  @@index([candidateId])
+  @@map("matches")
+}
+
+model MatchRequest {
+  id          String   @id @default(cuid())
+  senderId    String
+  sender      User     @relation("SentMatchRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  
+  receiverId  String
+  receiver    User     @relation("ReceivedMatchRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  status      String   @default("pending") // 'pending', 'accepted', 'declined', 'withdrawn'
+  message     String?  @db.Text
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@map("match_requests")
+}
+
+model Shortlist {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("UserShortlists", fields: [userId], references: [id], onDelete: Cascade)
+  
+  candidateId String
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, candidateId])
+  @@index([userId])
+  @@map("shortlists")
+}
+
+model FollowUp {
+  id          String    @id @default(cuid())
+  customerId  String
+  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  matchId     String?
+  match       Match?    @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  
+  title       String
+  dueDate     String    // ISO date string YYYY-MM-DD
+  priority    String    @default("medium") // 'high' | 'medium' | 'low'
+  status      String    @default("pending") // 'pending' | 'completed'
+  notes       String?   @db.Text
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([customerId])
+  @@index([dueDate])
+  @@index([status])
+  @@map("follow_ups")
+}
+
+model Conversation {
+  id             String    @id @default(cuid())
+  participantAId String
+  participantA   User      @relation("ParticipantA", fields: [participantAId], references: [id], onDelete: Cascade)
+  
+  participantBId String
+  participantB   User      @relation("ParticipantB", fields: [participantBId], references: [id], onDelete: Cascade)
+  
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  messages       Message[]
+
+  @@unique([participantAId, participantBId])
+  @@index([participantAId])
+  @@index([participantBId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  senderId       String
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  
+  content        String       @db.Text
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type      String   // 'interest_received' | 'interest_accepted' | 'interest_declined' | 'new_message'
+  title     String
+  message   String   @db.Text
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  author     String
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([customerId])
+  @@map("notes")
+}
+
+model TimelineEvent {
+  id          String   @id @default(cuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  type        String
+  title       String
+  description String   @db.Text
+  createdAt   DateTime @default(now())
+
+  @@index([customerId])
+  @@map("timeline_events")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  action     String
+  entityType String
+  entityId   String?
+  metadata   String?  @db.Text // Stored as JSON string
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@map("audit_logs")
+}

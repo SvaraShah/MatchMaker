@@ -1,140 +1,143 @@
-# Matchmaker CRM & AI Matchmaking Engine
+# Two-Sided Matchmaker CRM & AI Matrimony Platform
 
-An internal CRM-style dashboard designed for professional matchmaking experts to manage clients, track their journey, log notes, evaluate compatibility, and share hand-picked pairings powered by an advanced rule-based matching engine and OpenAI completions.
+A production-ready, full-stack **Two-Sided Marriage-Bureau Platform** built with **Next.js 16 (App Router)**, **React 19**, **TypeScript**, **PostgreSQL**, **Prisma ORM**, **Tailwind CSS v4**, and server-side **OpenAI SDK integration**.
 
----
-
-## Technical Stack
-- **Core**: Next.js 16 (App Router), React 19, TypeScript
-- **Styling**: Tailwind CSS v4, Lucide React (Icons)
-- **Database**: File-based Structured JSON (`src/data/db.json`)
-- **Seeder**: Faker JS (`@faker-js/faker`) via TSX
-- **AI**: OpenAI Chat Completions (fallback-resilient native fetch implementation)
-- **Animations**: Canvas Confetti
+The platform provides two role-based experiences:
+1. **ADMIN / MATCHMAKER**: Professional CRM workspace for managing client portfolios, running AI compatibility analysis, reviewing activity timelines, and interacting with the AI Matchmaker Agent.
+2. **REGISTERED USER**: Premium matrimonial experience for discovering curated opposite-gender matches, saving shortlists, expressing interests, and updating partner preferences.
 
 ---
 
-## Architectural Highlights
+## 🌟 Key Capabilities
 
-### 1. Compatibility Scoring Engine (`src/lib/matchingEngine.ts`)
-Prospects are ranked with a score from `0` to `100`, evaluated across 8 distinct weights:
-1. **Age (15%)**: Assesses alignment based on preferred age bounds.
-   - *Male Client*: Prefers younger matches (traditional preference heuristic).
-   - *Female Client*: Prefers older/same-age matches (long-term stability indicator).
-2. **Education (15%)**: Weighting of degrees, prioritizing dual postgraduate degree alignments and field compatibility (e.g., both medical/tech).
-3. **Career & Stability (15%)**: Evaluates income bracket differences. Focuses on stable income compatibility for female clients.
-4. **Religion & Caste (15%)**: Matches denomination preferences and caste filters.
-5. **Family Values (10%)**: Checks structure preferences (Joint vs. Nuclear family setups).
-6. **Lifestyle Habits (10%)**: Score weights for diet overlap (Vegetarian strictness), smoking, and drinking preferences.
-7. **Relocation & Location (10%)**: Values same-city residential stability or mutual relocation flexibilities.
-8. **Children Preference (10%)**: Aligns goals on having kids (Yes/No/Open).
-
-*Traditional metrics like height are factored into male/female scores (preferring shorter female partners for males and taller male partners for females).*
-
-### 2. High-Fidelity Local AI Fallback (`src/lib/openai.ts`)
-The server-side endpoint makes direct fetch requests to OpenAI completions (`gpt-4o-mini`).
-- **If the `OPENAI_API_KEY` is missing or invalid**, the engine gracefully falls back to an offline rule-based content compiler. This analyzer maps profile fields to generate authentic, personalized matchmaking pitches and introductions without degrading application response times.
-
-### 3. Native Print Styles for PDF Exports (`src/app/globals.css`)
-Clicking the **"Export Match Report"** button triggers the browser's printing panel. Tailored `@media print` directives hide sidebars, filter headers, and action icons, formatting the client profile dossier into a clean document suitable for PDF distribution.
+- **Two Role System**: `ADMIN` (Matchmaker) and `USER` (Matrimonial Client) with server-side role authorization and cookie-based JWT sessions.
+- **Pure PostgreSQL & Prisma ORM**: Complete database schemas (`User`, `Customer`, `CustomerPreference`, `Match`, `MatchRequest`, `Shortlist`, `Note`, `TimelineEvent`, `AuditLog`).
+- **Server-Side Heterosexual Gender Filtering**: Female clients receive Male candidate profiles; Male clients receive Female candidate profiles on all user-facing match discovery feeds.
+- **8-Dimension Deterministic Matching Engine**: Primary compatibility scoring system evaluating Age, Education, Career/Income, Religion/Caste, Family Values, Lifestyle Habits, Location/Relocation, and Children preferences out of 100%.
+- **Server-Side OpenAI Integration**: Privacy-sanitized AI introduction pitches and match explanations generated using the official `openai` SDK (`gpt-4o-mini`) with controlled fallbacks.
+- **User Privacy Serializers**: Normal users never receive sensitive phone numbers, email addresses, password hashes, or internal CRM notes.
+- **Dynamic Greetings**: Time-of-day greetings ("Good morning", "Good afternoon", "Good evening") personalized to the user's name/role.
+- **Match / Shortlist / Interest Semantics**:
+  - `Match`: System-generated compatibility pairing with deterministic score & AI pitch.
+  - `Shortlist`: Private user bookmark of candidate profiles.
+  - `MatchRequest`: Active expression of interest with Accept/Decline status tracking.
 
 ---
 
-## Directory Structure
+## 🏗️ Architecture Overview
+
 ```
-MatchMaker/
-├── scripts/
-│   └── seed.ts                  # Seeding script for 130 authentic Indian profiles
-├── src/
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── auth/            # Cookie-based authentication routes (login/logout)
-│   │   │   ├── customers/       # CRM listing and single client endpoints
-│   │   │   └── matches/         # Log matchmaker decisions (Save, Reject, Send)
-│   │   ├── customer/[id]/       # Profile Dossier, Timeline Logs, and Recommendations
-│   │   ├── dashboard/           # Main CRM grid, search, and filters
-│   │   ├── login/               # Sign-in UI with autofill demo credentials
-│   │   ├── globals.css          # Color tokens, scrollbars, print directives
-│   │   ├── layout.tsx           # Anti-flash theme check script
-│   │   └── page.tsx             # Redirect landing page
-│   ├── data/
-│   │   └── db.json              # Local persistent database file
-│   ├── lib/
-│   │   ├── db.ts                # Database access layers
-│   │   ├── matchingEngine.ts    # Scoring rules
-│   │   └── openai.ts            # OpenAI chat completions and local fallback
-│   ├── types/
-│   │   └── matchmaker.ts        # Shared TS typings
-│   └── middleware.ts            # Route protection
-├── package.json
-└── tsconfig.json
+                          TWO-SIDED MARRIAGE-BUREAU PLATFORM
+                   ┌───────────────────────┬───────────────────────┐
+                   │  ADMIN / MATCHMAKER   │  REGISTERED USER      │
+                   ├───────────────────────┼───────────────────────┤
+                   │ /admin Routes         │ /app Routes           │
+                   │  - CRM Dashboard      │  - Matrimonial UX     │
+                   │  - Client Management  │  - Discover Matches   │
+                   │  - AI Matchmaker Agent│  - Requests & Interests│
+                   │  - Audit Logs & Stats │  - My Shortlist       │
+                   │                       │  - Profile & Prefs    │
+                   └───────────────────────┴───────────────────────┘
+                                           │
+                                           ▼
+                                ┌─────────────────────┐
+                                │ Shared Backend APIs │
+                                │ - Role Auth & AuthZ │
+                                │ - Gender Filter     │
+                                │ - Deterministic     │
+                                │   Matching Engine   │
+                                │ - OpenAI Service    │
+                                │ - Prisma & Postgres │
+                                └─────────────────────┘
 ```
 
 ---
 
-## Local Development & Setup
+## 🔑 Environment Variables
+
+Copy `.env.example` to `.env`:
+
+```env
+# PostgreSQL Database Connection
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/matchmaker?schema=public"
+
+# Secret key for JWT session cookies
+AUTH_SECRET="your_production_secret_key_here"
+
+# OpenAI API Key (Server-Side Only)
+OPENAI_API_KEY="sk-..."
+```
+
+> [!CAUTION]
+> Never expose `OPENAI_API_KEY` or `DATABASE_URL` to the client. Keep them server-side.
+
+---
+
+## 🚀 Getting Started
 
 ### 1. Install Dependencies
 ```bash
 npm install
 ```
 
-### 2. Configure Environment Variables
-Create a `.env.local` file in the root directory:
-```env
-OPENAI_API_KEY=your_actual_openai_key
-```
-*(If left blank or omitted, the application will automatically engage the high-fidelity mock AI generator for matches).*
-
-### 3. Seed the Database
-Generate 130 authentic Indian profiles categorized across cities, backgrounds, and occupations:
+### 2. Generate Prisma Client & Migrate Schema
 ```bash
-npx tsx scripts/seed.ts
+npx prisma generate
+npx prisma db push
 ```
 
-### 4. Run the Development Server
+### 3. Seed Database
+Seeds 1 Admin account (`matchmaker@tdc.com` / `password123`) and ~130 matrimonial User profiles from `src/data/db.json`:
+```bash
+npx prisma db seed
+```
+
+### 4. Run Development Server
 ```bash
 npm run dev
 ```
-Open `http://localhost:3000` in your web browser.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## Demo Credentials
-- **Email**: `matchmaker@tdc.com`
-- **Password**: `password123`
+## 👤 Development Credentials
+
+| Role | Email | Password | Target Route |
+| :--- | :--- | :--- | :--- |
+| **ADMIN** | `matchmaker@tdc.com` | `password123` | `/admin` |
+| **USER** | `ruksana.trivedi@example.com` | `password123` | `/app` |
 
 ---
 
-## Build and Verification
-To compile the application and verify layout structures:
-```bash
-npm run build
-```
+## 🛠️ API Route Summary
+
+### Authentication APIs
+- `POST /api/auth/login` — Login user or admin, sets HTTP-only session cookie.
+- `POST /api/auth/logout` — Clear session cookie.
+- `GET /api/auth/me` — Verify authenticated session user.
+
+### User APIs (`/api/me/*`)
+- `GET /api/me/profile` & `PATCH /api/me/profile` — Get and update personal profile.
+- `GET /api/me/preferences` & `PATCH /api/me/preferences` — Get and update partner preferences.
+- `GET /api/me/matches` — Discover candidate profiles (opposite gender filtered).
+- `POST /api/me/shortlist` & `DELETE /api/me/shortlist/[id]` & `GET /api/me/shortlist` — Save/manage shortlist.
+- `POST /api/me/interests` — Send interest request to a candidate.
+- `GET /api/me/requests` & `PATCH /api/me/requests/[id]` — View, accept, or decline received interests.
+
+### Admin APIs (`/api/admin/*`)
+- `GET /api/admin/analytics` — Real-time CRM platform metrics.
+- `POST /api/admin/agent/chat` — Admin AI Matchmaker Agent chat endpoint.
+- `GET /api/customers` & `GET /api/customers/[id]` — Admin client registry views.
+- `POST /api/customers/[id]/notes` — Log client call notes & update journey status.
+- `POST /api/matches/action` — Record match proposals and update customer timeline.
+- `POST /api/matches/analyze` — Run deterministic score + OpenAI pitch generation + DB save.
 
 ---
 
-## Production Deployment to Vercel
+## 🛡️ Security Features
 
-This app compiles into a standard Next.js project and can be deployed to Vercel in a few steps:
-
-1. **Install Vercel CLI** (if not installed):
-   ```bash
-   npm i -g vercel
-   ```
-2. **Log in to Vercel**:
-   ```bash
-   vercel login
-   ```
-3. **Trigger Deployment**:
-   Run the command from the root folder:
-   ```bash
-   vercel
-   ```
-   Follow the prompts to link the project.
-4. **Configure Environment Variables**:
-   In the Vercel Dashboard, go to **Settings > Environment Variables** and add `OPENAI_API_KEY` if using live AI features.
-5. **Production Deploy**:
-   ```bash
-   vercel --prod
-   ```
+1. **Server-Side Authorization**: Enforced on API routes with `requireAdmin` and `requireUser`.
+2. **Password Hashing**: Bcrypt password hashing (`10` salt rounds).
+3. **HTTP-Only Cookies**: Secure, `SameSite=Lax` session management.
+4. **Privacy Sanitization**: User views exclude phone numbers, email addresses, internal notes, and audit logs.
+5. **SQL Injection Protection**: Automated via Prisma ORM parameterized queries.

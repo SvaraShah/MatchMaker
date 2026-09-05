@@ -78,6 +78,7 @@ export interface Customer {
   dob: string; // ISO String
   age: number;
   country: string;
+  state?: string;
   city: string;
   height: number; // in cm
   religion: 'Hindu' | 'Muslim' | 'Christian' | 'Sikh' | 'Jain' | 'Parsi';
@@ -86,6 +87,9 @@ export interface Customer {
   languagesKnown: string[];
   email: string;
   phone: string;
+  photoUrl?: string;
+  aboutMe?: string;
+  maritalStatus?: string;
   education: EducationInfo;
   profession: ProfessionalInfo;
   family: FamilyInfo;
