@@ -10,7 +10,7 @@ export function middleware(request: NextRequest) {
   const session = token ? verifyToken(token) : null;
 
   // Define public paths that do not require authentication
-  const isPublicPath = pathname === '/login';
+  const isPublicPath = pathname === '/login' || pathname === '/register';
   
   // Define assets or API routes that should be bypassed
   const isBypassed = pathname.startsWith('/_next') || 
