@@ -2,34 +2,20 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Heart, Lock, Mail, Loader2, Sparkles, ShieldCheck, UserCheck } from 'lucide-react';
+import { Heart, Lock, Mail, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleAdminFill = () => {
-    setEmail('matchmaker@tdc.com');
-    setPassword('password123');
-    setError('');
-  };
-
-  const handleUserFill = () => {
-    setEmail('ruksana.trivedi@example.com');
-    setPassword('password123');
-    setError('');
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
-    if (!email || !password) {
-      setError('Please fill in all fields.');
+    if (!email.trim() || !password) {
+      setError('Invalid email or password.');
       return;
     }
 
@@ -39,25 +25,21 @@ export default function LoginPage() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim(), password }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
-        router.refresh();
-        if (data.user?.role === 'ADMIN') {
-          router.push('/admin');
-        } else {
-          router.push('/app');
-        }
+        const targetRoute = data.user?.role === 'ADMIN' ? '/admin' : '/app';
+        window.location.replace(targetRoute);
       } else {
-        setError(data.error || 'Authentication failed. Please check your credentials.');
+        setError(data.error || 'Invalid email or password.');
         setLoading(false);
       }
     } catch (err) {
       console.error('Login submit error:', err);
-      setError('A network error occurred. Please try again.');
+      setError('Invalid email or password.');
       setLoading(false);
     }
   };
@@ -84,11 +66,11 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="glass-panel rounded-3xl p-8 shadow-xl">
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Welcome back</h2>
-          <p className="mb-6 text-xs text-slate-400">Sign in to access your matrimonial dashboard or matchmaker portal.</p>
+          <h2 className="text-xl font-semibold text-slate-950 dark:text-white">Sign In</h2>
+          <p className="mb-6 text-xs text-slate-500">Access your registered matrimonial account or matchmaker portal.</p>
 
           {error && (
-            <div className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs font-medium text-destructive animate-pulse-slow">
+            <div className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive">
               {error}
             </div>
           )}
@@ -107,7 +89,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-border bg-background/50 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-border bg-background/50 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-slate-900 dark:text-white"
                   required
                   disabled={loading}
                 />
@@ -127,7 +109,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-border bg-background/50 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-border bg-background/50 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-slate-900 dark:text-white"
                   required
                   disabled={loading}
                 />
@@ -145,38 +127,10 @@ export default function LoginPage() {
                   Verifying Credentials...
                 </>
               ) : (
-                'Access Portal'
+                'Sign In'
               )}
             </button>
           </form>
-
-          {/* Quick Demo Login Triggers */}
-          <div className="mt-6 border-t border-border pt-6 space-y-2">
-            <span className="block text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              Development Demo Login Options
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={handleAdminFill}
-                disabled={loading}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 text-xs text-primary py-2.5 px-3 font-medium transition-all cursor-pointer"
-              >
-                <ShieldCheck className="h-4 w-4" />
-                <span>Admin Demo</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleUserFill}
-                disabled={loading}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-rose-400/30 bg-rose-500/5 hover:bg-rose-500/10 text-xs text-rose-600 dark:text-rose-400 py-2.5 px-3 font-medium transition-all cursor-pointer"
-              >
-                <UserCheck className="h-4 w-4" />
-                <span>User Demo</span>
-              </button>
-            </div>
-          </div>
         </div>
 
         <p className="mt-8 text-center text-xs text-slate-400">
@@ -186,3 +140,4 @@ export default function LoginPage() {
     </main>
   );
 }
+
