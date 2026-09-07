@@ -16,7 +16,8 @@ export function middleware(request: NextRequest) {
   const isBypassed = pathname.startsWith('/_next') || 
                      pathname.startsWith('/favicon.ico') || 
                      pathname.startsWith('/public') ||
-                     pathname.startsWith('/api/auth');
+                     pathname.startsWith('/api/auth') ||
+                     pathname === '/api/health';
 
   if (isBypassed) {
     return NextResponse.next();
