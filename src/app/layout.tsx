@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "TDC Matchmaker CRM & AI Matchmaking Engine",
-  description: "Internal CRM-style dashboard used by professional matchmakers to manage clients, track journey status, and generate intelligent compatibility recommendations.",
+  title: "MatchMaker | Admin Workspace",
+  description: "Internal matrimonial matchmaker workspace for client portfolio management, partner preference tracking, and compatibility evaluation.",
 };
 
 export default function RootLayout({

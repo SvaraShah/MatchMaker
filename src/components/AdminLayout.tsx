@@ -85,7 +85,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] text-stone-900 flex flex-col lg:flex-row font-sans selection:bg-rose-100 selection:text-rose-900">
+    <div className="min-h-screen bg-[#FAF9F6] text-stone-900 flex flex-col lg:flex-row font-sans selection:bg-rose-100 selection:text-rose-900 max-w-full overflow-x-hidden">
       
       {/* Quiet Light Sidebar */}
       <aside className="hidden lg:flex w-60 flex-col border-r border-stone-200/80 bg-[#FAF9F6] sticky top-0 h-screen z-30 shrink-0 select-none">
@@ -149,7 +149,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden">
         
         {/* Top Header */}
         <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-stone-200/70 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8">
