@@ -1,75 +1,74 @@
-# Two-Sided Matchmaker CRM & AI Matrimony Platform
+# MatchMaker — Premium Matrimonial Matchmaker Workspace
 
-A production-ready, full-stack **Two-Sided Marriage-Bureau Platform** built with **Next.js 16 (App Router)**, **React 19**, **TypeScript**, **PostgreSQL**, **Prisma ORM**, **Tailwind CSS v4**, and server-side **OpenAI SDK integration**.
+A high-end, production-ready internal workspace designed specifically for professional matrimonial matchmakers and marriage bureau operators. Built with **Next.js 16 (App Router)**, **React 19**, **TypeScript**, and **Tailwind CSS v4**.
 
-The platform provides two role-based experiences:
-1. **ADMIN / MATCHMAKER**: Professional CRM workspace for managing client portfolios, running AI compatibility analysis, reviewing activity timelines, and interacting with the AI Matchmaker Agent.
-2. **REGISTERED USER**: Premium matrimonial experience for discovering curated opposite-gender matches, saving shortlists, expressing interests, and updating partner preferences.
+The application features a warm, sophisticated matrimonial visual direction (ivory `#FAF9F6` canvas, quiet subtle rose accents, serif typography, and premium profile cards) powered by a **12-dimension deterministic matching engine** with hard gender eligibility filtering and rich matrimonial profile datasets.
 
 ---
 
-## 🌟 Key Capabilities
+## 🌟 Key Product Capabilities
 
-- **Two Role System**: `ADMIN` (Matchmaker) and `USER` (Matrimonial Client) with server-side role authorization and cookie-based JWT sessions.
-- **Pure PostgreSQL & Prisma ORM**: Complete database schemas (`User`, `Customer`, `CustomerPreference`, `Match`, `MatchRequest`, `Shortlist`, `Note`, `TimelineEvent`, `AuditLog`).
-- **Server-Side Heterosexual Gender Filtering**: Female clients receive Male candidate profiles; Male clients receive Female candidate profiles on all user-facing match discovery feeds.
-- **8-Dimension Deterministic Matching Engine**: Primary compatibility scoring system evaluating Age, Education, Career/Income, Religion/Caste, Family Values, Lifestyle Habits, Location/Relocation, and Children preferences out of 100%.
-- **Server-Side OpenAI Integration**: Privacy-sanitized AI introduction pitches and match explanations generated using the official `openai` SDK (`gpt-4o-mini`) with controlled fallbacks.
-- **User Privacy Serializers**: Normal users never receive sensitive phone numbers, email addresses, password hashes, or internal CRM notes.
-- **Dynamic Greetings**: Time-of-day greetings ("Good morning", "Good afternoon", "Good evening") personalized to the user's name/role.
-- **Match / Shortlist / Interest Semantics**:
-  - `Match`: System-generated compatibility pairing with deterministic score & AI pitch.
-  - `Shortlist`: Private user bookmark of candidate profiles.
-  - `MatchRequest`: Active expression of interest with Accept/Decline status tracking.
-
----
-
-## 🏗️ Architecture Overview
-
-```
-                          TWO-SIDED MARRIAGE-BUREAU PLATFORM
-                   ┌───────────────────────┬───────────────────────┐
-                   │  ADMIN / MATCHMAKER   │  REGISTERED USER      │
-                   ├───────────────────────┼───────────────────────┤
-                   │ /admin Routes         │ /app Routes           │
-                   │  - CRM Dashboard      │  - Matrimonial UX     │
-                   │  - Client Management  │  - Discover Matches   │
-                   │  - AI Matchmaker Agent│  - Requests & Interests│
-                   │  - Audit Logs & Stats │  - My Shortlist       │
-                   │                       │  - Profile & Prefs    │
-                   └───────────────────────┴───────────────────────┘
-                                           │
-                                           ▼
-                                ┌─────────────────────┐
-                                │ Shared Backend APIs │
-                                │ - Role Auth & AuthZ │
-                                │ - Gender Filter     │
-                                │ - Deterministic     │
-                                │   Matching Engine   │
-                                │ - OpenAI Service    │
-                                │ - Prisma & Postgres │
-                                └─────────────────────┘
-```
+- **Quiet Light Sidebar & Workspace Layout**: Designed around matchmaker workflow efficiency. Includes brand heart logo (*MatchMaker — People • Profiles • Possibilities*), quiet rose navigation highlights, global search header, and footer quote (*"Meaningful Matches, Brighter Futures."*).
+- **Deterministic 12-Dimension Match Engine**:
+  - **Hard Gender Eligibility Pre-Filter**: Female clients match strictly with Male candidates; Male clients match strictly with Female candidates. Invalid gender pairings are 100% excluded.
+  - **Realistic Score Distribution**:
+    - `85–95%`: Excellent Match
+    - `70–84%`: Good Match
+    - `55–69%`: Moderate Match
+    - `Below 55%`: Low Compatibility
+  - **Comprehensive Category Breakdown**: Evaluates Age, Location, Religion, Jain Preference & Sect (Shwetambar / Digambar / Any), Caste & Sub-caste, Occupation, Education, Income, Height, Marital Status, Diet & Lifestyle, and Family Values.
+- **Admin Command Center (`/admin`)**: Time-based greeting, 8 KPI stat cards (Total Clients, Active Profiles, New This Week, Matches Suggested, Pending Interests, Connections, Follow-ups Due, High Compatibility), Today's Follow-ups table, Recent Activity feed, High Compatibility profile cards, and Analytics visuals.
+- **Client Directory 2.0 (`/admin/clients`)**: Search bar, deep multi-filters (Gender, Religion, Jain Sect, City, Marital Status, Journey Stage), and toggleable Grid & Data Table views.
+- **Client 360° Dossier (`/admin/clients/[id]`)**: Prominent **"Looking For" Partner Preferences** banner showcasing 12 criteria side-by-side, profile completeness %, categorized profile tabs (About, Preferences, Career, Family, Timeline, Matchmaker Notes), and quick action bar.
+- **Candidate Matching & Side-by-Side Comparison (`/admin/matches?client=[id]`)**: Candidate recommendations sorted by score, expandable *"Why this match?"* reasoning, and an interactive side-by-side attribute alignment comparison modal (Client VS Candidate).
+- **9-Stage Kanban Matchmaking Pipeline (`/admin/pipeline`)**: Page-level scroll containment (browser window never horizontally overflows), controlled column horizontal scroll wrapper, structured matrimonial cards, clear button hierarchy (*Find Matches* primary vs *View Dossier* secondary), and polished empty states.
+- **Task Follow-ups Hub (`/admin/follow-ups`)**: Categorized task manager (Today, Overdue, Upcoming, Completed) with priority badges (High, Medium, Low) and quick status toggles.
+- **Executive Analytics (`/admin/analytics`)**: Conversion funnel, compatibility score distribution, client demographics by city, matches by religion/sect, and client growth trends.
 
 ---
 
-## 🔑 Environment Variables
+## 🏗️ Matchmaker Workflow Core
 
-Copy `.env.example` to `.env`:
-
-```env
-# PostgreSQL Database Connection
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/matchmaker?schema=public"
-
-# Secret key for JWT session cookies
-AUTH_SECRET="your_production_secret_key_here"
-
-# OpenAI API Key (Server-Side Only)
-OPENAI_API_KEY="sk-..."
+```
+                         PROFESSIONAL MATCHMAKER WORKFLOW
+       ┌─────────────────┐
+       │   CLIENTS       │ ──► Search & multi-filter client directory
+       └────────┬────────┘
+                │
+                ▼
+       ┌─────────────────┐
+       │  CLIENT 360     │ ──► Review 12-dimension "Looking For" Partner Preferences
+       └────────┬────────┘
+                │
+                ▼
+       ┌─────────────────┐
+       │  FIND MATCHES   │ ──► Execute deterministic engine with hard gender pre-filter
+       └────────┬────────┘
+                │
+                ▼
+       ┌─────────────────┐
+       │ COMPATIBILITY   │ ──► Transparent score breakdown & "Why this match?" reasoning
+       └────────┬────────┘
+                │
+                ▼
+       ┌─────────────────┐
+       │  SIDE-BY-SIDE   │ ──► Compare Client VS Candidate attribute matrix
+       └────────┬────────┘
+                │
+                ▼
+       ┌─────────────────┐
+       │ SUGGEST & TRACK │ ──► Shortlist candidate, suggest match, log follow-up, track pipeline
+       └─────────────────┘
 ```
 
-> [!CAUTION]
-> Never expose `OPENAI_API_KEY` or `DATABASE_URL` to the client. Keep them server-side.
+---
+
+## 💻 Tech Stack & Architecture
+
+- **Framework**: Next.js 16 (App Router)
+- **UI & Styling**: React 19, Tailwind CSS v4, Lucide Icons
+- **Typography**: Playfair Display / Cormorant Garamond (Serif Headings) + Plus Jakarta Sans (UI / Controls)
+- **Data Engine**: Deterministic Matcher (`src/lib/deterministicMatcher.ts`) & Hardcoded Matrimonial Dataset (`src/lib/mockData.ts`)
 
 ---
 
@@ -80,64 +79,36 @@ OPENAI_API_KEY="sk-..."
 npm install
 ```
 
-### 2. Generate Prisma Client & Migrate Schema
-```bash
-npx prisma generate
-npx prisma db push
-```
-
-### 3. Seed Database
-Seeds 1 Admin account (`matchmaker@tdc.com` / `password123`) and ~130 matrimonial User profiles from `src/data/db.json`:
-```bash
-npx prisma db seed
-```
-
-### 4. Run Development Server
+### 2. Run Development Server
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+Open [http://localhost:3000](http://localhost:3000) in your browser. The application opens directly into `/admin` (MatchMaker Admin Workspace).
 
 ---
 
-## 👤 Development Credentials
+## 🔍 Verification & Build Commands
 
-| Role | Email | Password | Target Route |
-| :--- | :--- | :--- | :--- |
-| **ADMIN** | `matchmaker@tdc.com` | `password123` | `/admin` |
-| **USER** | `ruksana.trivedi@example.com` | `password123` | `/app` |
+```bash
+# Check TypeScript compilation (0 errors)
+npx tsc --noEmit
 
----
-
-## 🛠️ API Route Summary
-
-### Authentication APIs
-- `POST /api/auth/login` — Login user or admin, sets HTTP-only session cookie.
-- `POST /api/auth/logout` — Clear session cookie.
-- `GET /api/auth/me` — Verify authenticated session user.
-
-### User APIs (`/api/me/*`)
-- `GET /api/me/profile` & `PATCH /api/me/profile` — Get and update personal profile.
-- `GET /api/me/preferences` & `PATCH /api/me/preferences` — Get and update partner preferences.
-- `GET /api/me/matches` — Discover candidate profiles (opposite gender filtered).
-- `POST /api/me/shortlist` & `DELETE /api/me/shortlist/[id]` & `GET /api/me/shortlist` — Save/manage shortlist.
-- `POST /api/me/interests` — Send interest request to a candidate.
-- `GET /api/me/requests` & `PATCH /api/me/requests/[id]` — View, accept, or decline received interests.
-
-### Admin APIs (`/api/admin/*`)
-- `GET /api/admin/analytics` — Real-time CRM platform metrics.
-- `POST /api/admin/agent/chat` — Admin AI Matchmaker Agent chat endpoint.
-- `GET /api/customers` & `GET /api/customers/[id]` — Admin client registry views.
-- `POST /api/customers/[id]/notes` — Log client call notes & update journey status.
-- `POST /api/matches/action` — Record match proposals and update customer timeline.
-- `POST /api/matches/analyze` — Run deterministic score + OpenAI pitch generation + DB save.
+# Run Next.js production build verification
+npm run build
+```
 
 ---
 
-## 🛡️ Security Features
+## 📁 Key Project Routes
 
-1. **Server-Side Authorization**: Enforced on API routes with `requireAdmin` and `requireUser`.
-2. **Password Hashing**: Bcrypt password hashing (`10` salt rounds).
-3. **HTTP-Only Cookies**: Secure, `SameSite=Lax` session management.
-4. **Privacy Sanitization**: User views exclude phone numbers, email addresses, internal notes, and audit logs.
-5. **SQL Injection Protection**: Automated via Prisma ORM parameterized queries.
+| Route | Description |
+| :--- | :--- |
+| `/admin` | Admin Command Center Dashboard |
+| `/admin/clients` | Client Directory 2.0 with search & deep multi-filters |
+| `/admin/clients/[id]` | Client 360° Dossier & "Looking For" Partner Preferences |
+| `/admin/matches?client=[id]` | Candidate Matching Engine & Side-by-Side Comparison modal |
+| `/admin/pipeline` | 9-Stage Kanban Matchmaking Pipeline |
+| `/admin/follow-ups` | Task Follow-ups Hub |
+| `/admin/analytics` | Matchmaking Intelligence & Analytics |
+| `/admin/messages` | Matchmaker Direct Client Communication |
