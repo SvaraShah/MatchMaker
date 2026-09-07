@@ -9,14 +9,14 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   const session = token ? verifyToken(token) : null;
 
-  // Define public paths that do not require authentication
-  const isPublicPath = pathname === '/login' || pathname === '/register';
+  // Define public paths that do not require authentication (Admin prototype mode)
+  const isPublicPath = pathname === '/login' || pathname === '/register' || pathname === '/' || pathname.startsWith('/admin');
   
   // Define assets or API routes that should be bypassed
   const isBypassed = pathname.startsWith('/_next') || 
                      pathname.startsWith('/favicon.ico') || 
                      pathname.startsWith('/public') ||
-                     pathname.startsWith('/api/auth') ||
+                     pathname.startsWith('/api') ||
                      pathname === '/api/health';
 
   if (isBypassed) {

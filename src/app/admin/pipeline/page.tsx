@@ -1,184 +1,166 @@
-'use strict';
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import AdminLayout from '@/components/AdminLayout';
+import { MOCK_PROFILES, MatrimonialProfile } from '@/lib/mockData';
 import {
   Kanban,
-  Users,
-  Loader2,
-  ArrowRight,
-  Clock,
+  Search,
   Eye,
-  CheckCircle,
-  AlertCircle,
-  Plus,
+  Heart,
+  Calendar,
+  Sparkles,
+  ChevronRight
 } from 'lucide-react';
-import AdminLayout from '@/components/AdminLayout';
+
+const PIPELINE_STAGES: MatrimonialProfile['journeyStatus'][] = [
+  'New Lead',
+  'Profile Pending',
+  'Profile Verified',
+  'Preferences Confirmed',
+  'Matching',
+  'Match Suggested',
+  'Interest Sent',
+  'Connection',
+  'Closed'
+];
 
 export default function PipelinePage() {
   const router = useRouter();
-  const [stages, setStages] = useState<string[]>([]);
-  const [pipeline, setPipeline] = useState<Record<string, any[]>>({});
-  const [loading, setLoading] = useState(true);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [profiles, setProfiles] = useState<MatrimonialProfile[]>(MOCK_PROFILES);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchPipeline = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/admin/pipeline');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success) {
-          setStages(json.stages);
-          setPipeline(json.pipeline);
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchPipeline();
-  }, [fetchPipeline]);
-
-  const handleStageChange = async (customerId: string, newStage: string) => {
-    if (updatingId) return;
-    setUpdatingId(customerId);
-    try {
-      const res = await fetch('/api/admin/pipeline', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerId, stage: newStage }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        fetchPipeline();
-      } else {
-        alert(json.error || 'Failed to update stage');
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setUpdatingId(null);
-    }
+  const handleStageChange = (profileId: string, newStage: MatrimonialProfile['journeyStatus']) => {
+    setProfiles(prev =>
+      prev.map(p => (p.id === profileId ? { ...p, journeyStatus: newStage } : p))
+    );
   };
+
+  const filtered = profiles.filter(p =>
+    p.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.city.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-stone-200/60">
         <div>
-          <h1 className="text-2xl font-black text-slate-950 dark:text-white flex items-center gap-2">
-            <Kanban className="h-6 w-6 text-primary" />
-            Matchmaker Client Kanban Pipeline
+          <h1 className="font-serif text-2xl font-bold text-stone-900">
+            Kanban Matchmaking Pipeline
           </h1>
-          <p className="text-xs text-slate-500">
-            Track and advance clients across all 9 stages from initial lead through successful matrimony.
+          <p className="text-xs text-stone-500 mt-0.5">
+            Track clients across 9 matrimonial conversion stages
           </p>
         </div>
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center min-h-[400px]">
-            <Loader2 className="h-8 w-8 text-primary animate-spin" />
-            <p className="text-xs text-slate-500 mt-2 font-medium">Loading matchmaker pipeline stages...</p>
-          </div>
-        ) : (
-          <div className="flex gap-4 overflow-x-auto pb-6 items-start">
-            {stages.map((stage) => {
-              const clientsInStage = pipeline[stage] || [];
-              return (
-                <div
-                  key={stage}
-                  className="w-72 shrink-0 glass-panel rounded-3xl p-4 border border-border bg-slate-100/50 dark:bg-slate-900/50 flex flex-col max-h-[750px]"
-                >
-                  <div className="flex items-center justify-between border-b border-border pb-3 mb-3">
-                    <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                      {stage}
-                    </span>
-                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                      {clientsInStage.length}
-                    </span>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                    {clientsInStage.length === 0 ? (
-                      <div className="p-6 text-center text-[11px] text-slate-400 border border-dashed border-border rounded-2xl">
-                        No clients in stage
-                      </div>
-                    ) : (
-                      clientsInStage.map((client) => (
-                        <div
-                          key={client.id}
-                          className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-border shadow-xs space-y-3 hover:border-primary/50 transition-all"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                              <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-rose-400 to-rose-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                                {client.firstName.charAt(0)}
-                              </div>
-                              <div>
-                                <h4
-                                  onClick={() => router.push(`/admin/clients/${client.id}`)}
-                                  className="text-xs font-bold text-slate-950 dark:text-white hover:text-primary transition-colors cursor-pointer truncate"
-                                >
-                                  {client.firstName} {client.lastName}
-                                </h4>
-                                <span className="text-[10px] text-slate-400 block">
-                                  {client.gender}, {client.age} yrs • {client.city}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="text-[11px] text-slate-500 border-t border-border/50 pt-2 space-y-1">
-                            <p className="truncate">
-                              <strong className="text-slate-700 dark:text-slate-300">Profession:</strong> {client.profession.designation}
-                            </p>
-
-                            {client.nextFollowUp && (
-                              <div className="flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 pt-1">
-                                <Clock className="h-3 w-3" />
-                                <span>Task due: {client.nextFollowUp.dueDate}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Stage selector dropdown */}
-                          <div className="pt-2 border-t border-border flex items-center justify-between">
-                            <select
-                              value={stage}
-                              disabled={updatingId === client.id}
-                              onChange={(e) => handleStageChange(client.id, e.target.value)}
-                              className="text-[10px] font-bold px-2 py-1 rounded-lg border border-border bg-slate-50 dark:bg-slate-900 cursor-pointer"
-                            >
-                              {stages.map((s) => (
-                                <option key={s} value={s}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
-
-                            <button
-                              onClick={() => router.push(`/admin/clients/${client.id}`)}
-                              className="p-1 text-slate-400 hover:text-primary cursor-pointer"
-                              title="View Client Dossier"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {/* Search */}
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-stone-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search pipeline cards..."
+            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-stone-200 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 text-stone-900"
+          />
+        </div>
       </div>
+
+      {/* Kanban Board Container */}
+      <div className="flex gap-4 overflow-x-auto pb-6 pt-2">
+        {PIPELINE_STAGES.map((stage) => {
+          const stageClients = filtered.filter(p => p.journeyStatus === stage);
+          return (
+            <div
+              key={stage}
+              className="w-72 shrink-0 bg-stone-100/70 border border-stone-200/80 rounded-2xl p-3.5 flex flex-col space-y-3"
+            >
+              {/* Column Header */}
+              <div className="flex items-center justify-between px-1">
+                <span className="font-serif font-bold text-xs text-stone-900">{stage}</span>
+                <span className="px-2 py-0.5 rounded-full bg-stone-200 text-stone-700 text-[10px] font-bold">
+                  {stageClients.length}
+                </span>
+              </div>
+
+              {/* Column Cards */}
+              <div className="space-y-3 min-h-[350px]">
+                {stageClients.length === 0 ? (
+                  <div className="p-6 text-center text-[11px] text-stone-400 border border-dashed border-stone-200 rounded-xl bg-white/50">
+                    No clients in this stage
+                  </div>
+                ) : (
+                  stageClients.map((client) => (
+                    <div
+                      key={client.id}
+                      className="bg-white rounded-xl border border-stone-200 p-3.5 shadow-2xs space-y-3 hover:shadow-xs transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <img src={client.photoUrl} alt="" className="h-10 w-10 rounded-full object-cover border border-stone-200 shrink-0" />
+                        <div className="min-w-0">
+                          <h4
+                            onClick={() => router.push(`/admin/clients/${client.id}`)}
+                            className="font-bold text-xs text-stone-900 truncate hover:text-rose-700 cursor-pointer"
+                          >
+                            {client.firstName} {client.lastName}
+                          </h4>
+                          <p className="text-[10px] text-stone-500 font-medium">
+                            {client.age} yrs • {client.city}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-[11px] space-y-0.5 text-stone-600 bg-stone-50 p-2 rounded-lg border border-stone-100">
+                        <p className="font-semibold text-stone-800 truncate">{client.profession.designation}</p>
+                        <p className="text-[10px] text-rose-700 font-medium truncate">{client.religion} ({client.caste})</p>
+                      </div>
+
+                      {/* Stage Selector */}
+                      <div className="space-y-1">
+                        <label className="block text-[9px] font-bold text-stone-400 uppercase tracking-wider">Move Stage</label>
+                        <select
+                          value={client.journeyStatus}
+                          onChange={(e) => handleStageChange(client.id, e.target.value as any)}
+                          className="w-full text-[10px] py-1 px-2 rounded-lg border border-stone-200 bg-white font-medium text-stone-800 focus:outline-none focus:border-rose-500 cursor-pointer"
+                        >
+                          {PIPELINE_STAGES.map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Card Actions */}
+                      <div className="flex items-center gap-2 pt-1 border-t border-stone-100">
+                        <button
+                          onClick={() => router.push(`/admin/clients/${client.id}`)}
+                          className="flex-1 py-1 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-[10px] font-semibold text-stone-700 transition-all cursor-pointer flex items-center justify-center gap-1"
+                        >
+                          <Eye className="h-3 w-3" />
+                          <span>Dossier</span>
+                        </button>
+                        <button
+                          onClick={() => router.push(`/admin/matches?client=${client.id}`)}
+                          className="flex-1 py-1 rounded-lg bg-rose-700 hover:bg-rose-800 text-white text-[10px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1"
+                        >
+                          <Heart className="h-3 w-3" />
+                          <span>Match</span>
+                        </button>
+                      </div>
+
+                    </div>
+                  ))
+                )}
+              </div>
+
+            </div>
+          );
+        })}
+      </div>
+
     </AdminLayout>
   );
 }

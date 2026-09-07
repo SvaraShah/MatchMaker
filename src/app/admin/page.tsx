@@ -1,347 +1,396 @@
-'use strict';
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
+import AdminLayout from '@/components/AdminLayout';
 import {
   Users,
-  Search,
-  ChevronRight,
-  TrendingUp,
-  Zap,
-  Sparkles,
-  Bot,
   UserCheck,
-  Calendar,
-  AlertCircle,
-  Clock,
+  UserPlus,
   Heart,
+  Clock,
   CheckCircle2,
+  AlertCircle,
+  Sparkles,
   ArrowRight,
-  Filter
+  TrendingUp,
+  Calendar,
+  Eye,
+  Send
 } from 'lucide-react';
-import AdminLayout from '@/components/AdminLayout';
-import { Customer } from '@/types/matchmaker';
+import {
+  ADMIN_STATS,
+  TODAY_FOLLOWUPS,
+  RECENT_ACTIVITIES,
+  MOCK_PROFILES,
+  ANALYTICS_DATA
+} from '@/lib/mockData';
+import { calculateDeterministicCompatibility } from '@/lib/deterministicMatcher';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [followUps, setFollowUps] = useState<any[]>([]);
 
-  // Stats
-  const [stats, setStats] = useState<any>({
-    total: 0,
-    active: 0,
-    matchSearch: 0,
-    successRate: 0,
-    verified: 0,
-    pendingRequests: 0,
-    followUps: { overdue: 0, dueToday: 0 }
-  });
+  // High Compatibility matches using deterministic engine
+  const clientRiya = MOCK_PROFILES.find(p => p.id === 'client-1')!;
+  const clientMeera = MOCK_PROFILES.find(p => p.id === 'client-3')!;
+  const clientSneha = MOCK_PROFILES.find(p => p.id === 'client-5')!;
 
-  const fetchStats = async () => {
-    try {
-      const res = await fetch('/api/admin/analytics');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success) {
-          setStats(json.data);
-        }
-      }
-    } catch (e) {
-      console.error('Stats fetch error:', e);
+  const matchRiyaArjun = calculateDeterministicCompatibility(clientRiya, MOCK_PROFILES.find(p => p.id === 'client-2')!);
+  const matchMeeraKunal = calculateDeterministicCompatibility(clientMeera, MOCK_PROFILES.find(p => p.id === 'client-4')!);
+  const matchSnehaRohan = calculateDeterministicCompatibility(clientSneha, MOCK_PROFILES.find(p => p.id === 'client-6')!);
+
+  const sampleMatchCards = [
+    {
+      profile: MOCK_PROFILES[0], // Riya
+      score: matchRiyaArjun.totalScore,
+      label: matchRiyaArjun.label
+    },
+    {
+      profile: MOCK_PROFILES[1], // Arjun
+      score: 88,
+      label: 'Good Match'
+    },
+    {
+      profile: MOCK_PROFILES[2], // Meera
+      score: matchMeeraKunal.totalScore,
+      label: matchMeeraKunal.label
+    },
+    {
+      profile: MOCK_PROFILES[3], // Kunal
+      score: 82,
+      label: 'Good Match'
+    },
+    {
+      profile: MOCK_PROFILES[4], // Sneha
+      score: matchSnehaRohan.totalScore,
+      label: matchSnehaRohan.label
+    },
+    {
+      profile: MOCK_PROFILES[5], // Rohan
+      score: 76,
+      label: 'Good Match'
     }
-  };
-
-  const fetchFollowUps = async () => {
-    try {
-      const res = await fetch('/api/admin/follow-ups');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success) {
-          setFollowUps(json.data);
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const fetchCustomers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/customers');
-      if (res.ok) {
-        const data = await res.json();
-        setCustomers(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch customers:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchCustomers();
-    fetchStats();
-    fetchFollowUps();
-  }, [fetchCustomers]);
-
-  const recentClients = customers.slice(0, 6);
-  const needsAttentionClients = customers.filter(
-    (c) => c.journeyStatus === 'New Lead' || c.journeyStatus === 'Match Search'
-  ).slice(0, 5);
-
-  const overdueFollowUps = followUps.filter((f) => f.status === 'PENDING' && new Date(f.dueDate) < new Date());
+  ];
 
   return (
     <AdminLayout>
-      <div className="space-y-8 max-w-7xl mx-auto">
-        {/* Banner */}
-        <div className="glass-panel p-6 rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs relative overflow-hidden border border-border/60">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-black text-slate-950 dark:text-white flex items-center gap-2">
-              Matchmaker Command Center
-              <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Complete operational dossier management, client pipeline control, and AI-assisted matchmaking context.
-            </p>
+      
+      {/* Hero Greeting Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2 border-b border-stone-200/60">
+        <div>
+          <div className="flex items-center gap-2 text-rose-700 font-medium text-xs mb-1">
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Matchmaker Executive Dashboard</span>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => router.push('/admin/pipeline')}
-              className="px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/95 transition-all cursor-pointer shadow-xs"
-            >
-              Open Pipeline Kanban
-            </button>
-          </div>
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight">
+            Good Morning, Matchmaker!
+          </h1>
+          <p className="text-xs sm:text-sm text-stone-500 mt-1">
+            Here's what's happening across your matrimonial matchmaking portfolio today.
+          </p>
         </div>
 
-        {/* Command Center KPI Cards Grid */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div
-            onClick={() => router.push('/admin/clients')}
-            className="glass-panel p-5 rounded-2xl flex items-center justify-between shadow-xs hover:border-primary/50 transition-all cursor-pointer"
-          >
-            <div className="space-y-1">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Total Clients</span>
-              <p className="text-2xl font-black">{loading ? '...' : stats.total}</p>
-              <span className="text-[10px] text-slate-500">{stats.active || 0} Active Clients</span>
-            </div>
-            <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 flex items-center justify-center">
-              <Users className="h-5 w-5" />
-            </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="hidden sm:block text-right pr-3 border-r border-stone-200">
+            <p className="font-serif italic text-xs text-stone-600">
+              "Bringing people together<br />for a brighter tomorrow."
+            </p>
           </div>
-
-          <div
-            onClick={() => router.push('/admin/matches')}
-            className="glass-panel p-5 rounded-2xl flex items-center justify-between shadow-xs hover:border-amber-500/50 transition-all cursor-pointer"
-          >
-            <div className="space-y-1">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Match Search Queue</span>
-              <p className="text-2xl font-black text-amber-500">{loading ? '...' : stats.matchSearch}</p>
-              <span className="text-[10px] text-amber-600 dark:text-amber-400">Awaiting Match Review</span>
-            </div>
-            <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
-              <Zap className="h-5 w-5" />
-            </div>
+          <div className="px-3.5 py-2 rounded-xl bg-white border border-stone-200 shadow-2xs flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-rose-600" />
+            <span className="text-xs font-semibold text-stone-800">Tue, 10 Dec 2024</span>
           </div>
+        </div>
+      </div>
 
-          <div
-            onClick={() => router.push('/admin/follow-ups')}
-            className="glass-panel p-5 rounded-2xl flex items-center justify-between shadow-xs hover:border-rose-500/50 transition-all cursor-pointer"
-          >
-            <div className="space-y-1">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Overdue Follow-ups</span>
-              <p className="text-2xl font-black text-rose-500">{stats.followUps?.overdue || overdueFollowUps.length}</p>
-              <span className="text-[10px] text-rose-600 dark:text-rose-400">Requires Immediate Action</span>
+      {/* 8 Compact Metric Cards in Responsive Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        {[
+          { label: 'Total Clients', val: ADMIN_STATS.totalClients, icon: Users, color: 'text-blue-600 bg-blue-50' },
+          { label: 'Active Profiles', val: ADMIN_STATS.activeProfiles, icon: UserCheck, color: 'text-emerald-600 bg-emerald-50' },
+          { label: 'New This Week', val: ADMIN_STATS.newThisWeek, icon: UserPlus, color: 'text-violet-600 bg-violet-50' },
+          { label: 'Matches Suggested', val: ADMIN_STATS.matchesSuggested, icon: Heart, color: 'text-rose-600 bg-rose-50' },
+          { label: 'Pending Interests', val: ADMIN_STATS.pendingInterests, icon: Clock, color: 'text-amber-600 bg-amber-50' },
+          { label: 'Connections', val: ADMIN_STATS.connections, icon: CheckCircle2, color: 'text-teal-600 bg-teal-50' },
+          { label: 'Follow-ups Due', val: ADMIN_STATS.followUpsDue, icon: AlertCircle, color: 'text-orange-600 bg-orange-50' },
+          { label: 'High Compatibility', val: ADMIN_STATS.highCompatibility, icon: Sparkles, color: 'text-pink-600 bg-pink-50' }
+        ].map((stat, i) => {
+          const Icon = stat.icon;
+          return (
+            <div key={i} className="p-3 bg-white rounded-xl border border-stone-200/80 shadow-2xs hover:shadow-xs transition-all space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className={`p-1.5 rounded-lg ${stat.color}`}>
+                  <Icon className="h-3.5 w-3.5" />
+                </div>
+                <span className="text-[10px] text-stone-400 font-medium">CRM</span>
+              </div>
+              <div>
+                <span className="text-xl font-bold text-stone-900 block leading-tight">{stat.val}</span>
+                <span className="text-[11px] text-stone-500 font-medium block truncate mt-0.5">{stat.label}</span>
+              </div>
             </div>
-            <div className="h-10 w-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
-              <Clock className="h-5 w-5" />
+          );
+        })}
+      </div>
+
+      {/* Two Column Section: Today's Follow-ups + Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left: Today's Follow-ups Table */}
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-stone-200/80 shadow-2xs p-5 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+            <div>
+              <h2 className="font-serif font-bold text-base text-stone-900">Today's Follow-ups</h2>
+              <p className="text-[11px] text-stone-500">Scheduled client tasks requiring matchmaker attention</p>
             </div>
-          </div>
-
-          <div
-            onClick={() => router.push('/admin/analytics')}
-            className="glass-panel p-5 rounded-2xl flex items-center justify-between shadow-xs hover:border-emerald-500/50 transition-all cursor-pointer"
-          >
-            <div className="space-y-1">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Match Success Rate</span>
-              <p className="text-2xl font-black text-emerald-500">{loading ? '...' : `${stats.successRate}%`}</p>
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400">Matrimonial Conversions</span>
-            </div>
-            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-              <TrendingUp className="h-5 w-5" />
-            </div>
-          </div>
-        </section>
-
-        {/* Needs Attention & Action Items */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Needs Attention Callouts */}
-          <div className="glass-panel p-6 rounded-3xl space-y-4 border border-border/60">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-950 dark:text-white flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-amber-500" />
-                Clients Needing Operational Attention
-              </h2>
-              <span className="text-[10px] text-slate-400 font-bold uppercase">Priority Items</span>
-            </div>
-
-            <div className="space-y-3">
-              {needsAttentionClients.length === 0 ? (
-                <p className="text-xs text-slate-400 py-4 text-center">No client profiles currently require immediate review.</p>
-              ) : (
-                needsAttentionClients.map((c) => (
-                  <div
-                    key={c.id}
-                    onClick={() => router.push(`/admin/clients/${c.id}`)}
-                    className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-border/60 flex items-center justify-between hover:border-primary/50 transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs overflow-hidden">
-                        {c.photoUrl ? (
-                          <img src={c.photoUrl} alt={c.firstName} className="h-full w-full object-cover" />
-                        ) : (
-                          <span>{c.firstName[0]}</span>
-                        )}
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
-                          {c.firstName} {c.lastName}
-                        </h4>
-                        <p className="text-[11px] text-slate-500">
-                          {c.gender} • {c.age} yrs • {c.city}
-                        </p>
-                      </div>
-                    </div>
-
-                    <span className="px-2 py-1 text-[10px] font-bold rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                      {c.journeyStatus}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Overdue & Due Today Follow-up Tasks */}
-          <div className="glass-panel p-6 rounded-3xl space-y-4 border border-border/60">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-950 dark:text-white flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-rose-500" />
-                Matchmaker Follow-Up Radar
-              </h2>
-              <button
-                onClick={() => router.push('/admin/follow-ups')}
-                className="text-xs text-primary font-bold hover:underline"
-              >
-                View All →
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {followUps.slice(0, 4).length === 0 ? (
-                <p className="text-xs text-slate-400 py-4 text-center">No scheduled follow-up tasks recorded.</p>
-              ) : (
-                followUps.slice(0, 4).map((f) => (
-                  <div
-                    key={f.id}
-                    onClick={() => router.push(`/admin/clients/${f.customerId}`)}
-                    className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-border/60 flex items-center justify-between hover:border-primary/50 transition-all cursor-pointer"
-                  >
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">{f.title}</h4>
-                      <p className="text-[11px] text-slate-500">Client ID: {f.customerId}</p>
-                    </div>
-
-                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md ${
-                      f.status === 'COMPLETED'
-                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                        : new Date(f.dueDate) < new Date()
-                        ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
-                        : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
-                    }`}>
-                      {f.status === 'COMPLETED' ? 'Completed' : new Date(f.dueDate) < new Date() ? 'Overdue' : 'Due Soon'}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* Recent Client Registrations Grid */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              Recent Client Portfolios ({customers.length})
-            </h2>
             <button
-              onClick={() => router.push('/admin/clients')}
-              className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+              onClick={() => router.push('/admin/follow-ups')}
+              className="text-xs font-semibold text-rose-700 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
             >
-              <span>Explore All Clients</span>
+              <span>View all</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recentClients.map((c) => (
-              <div
-                key={c.id}
-                onClick={() => router.push(`/admin/clients/${c.id}`)}
-                className="glass-panel p-5 rounded-2xl flex flex-col justify-between space-y-4 hover:border-primary/50 transition-all cursor-pointer group shadow-xs hover:shadow-md"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm overflow-hidden">
-                        {c.photoUrl ? (
-                          <img src={c.photoUrl} alt={c.firstName} className="h-full w-full object-cover" />
-                        ) : (
-                          <span>{c.firstName[0]}</span>
-                        )}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-stone-100 text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                  <th className="pb-2.5 font-bold">Client</th>
+                  <th className="pb-2.5 font-bold">Task</th>
+                  <th className="pb-2.5 font-bold">Time</th>
+                  <th className="pb-2.5 font-bold">Priority</th>
+                  <th className="pb-2.5 text-right font-bold">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100 text-xs">
+                {TODAY_FOLLOWUPS.map((item) => (
+                  <tr key={item.id} className="hover:bg-stone-50/60 transition-all">
+                    <td className="py-3">
+                      <div
+                        className="flex items-center gap-2.5 cursor-pointer"
+                        onClick={() => router.push(`/admin/clients/${item.clientId}`)}
+                      >
+                        <img src={item.avatar} alt={item.clientName} className="h-7 w-7 rounded-full object-cover border border-stone-200" />
+                        <span className="font-semibold text-stone-900 hover:text-rose-700">{item.clientName}</span>
                       </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-slate-950 dark:text-white group-hover:text-primary transition-colors">
-                          {c.firstName} {c.lastName}
-                        </h3>
-                        <p className="text-xs text-slate-500">
-                          {c.gender} • {c.age} yrs • {c.city}
-                        </p>
-                      </div>
-                    </div>
+                    </td>
+                    <td className="py-3 text-stone-600 max-w-[180px] truncate">{item.task}</td>
+                    <td className="py-3 text-stone-500 font-medium text-[11px]">{item.dueTime}</td>
+                    <td className="py-3">
+                      <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                        item.priority === 'High' ? 'bg-rose-100 text-rose-800' :
+                        item.priority === 'Medium' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        {item.priority}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right">
+                      <span className="text-[11px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/50">
+                        {item.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                      {c.journeyStatus}
-                    </span>
-                  </div>
+        {/* Right: Recent Match Activity */}
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-stone-200/80 shadow-2xs p-5 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+            <div>
+              <h2 className="font-serif font-bold text-base text-stone-900">Recent Match Activity</h2>
+              <p className="text-[11px] text-stone-500">Live interactions & compatibility progress</p>
+            </div>
+            <button
+              onClick={() => router.push('/admin/pipeline')}
+              className="text-xs font-semibold text-rose-700 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
+            >
+              <span>View all</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
 
-                  <div className="text-xs space-y-1 text-slate-600 dark:text-slate-300 border-t border-border pt-3">
-                    <p className="truncate">
-                      <strong>Role:</strong> {c.profession?.designation}
-                    </p>
-                    <p className="truncate">
-                      <strong>Education:</strong> {c.education?.degree}
-                    </p>
-                  </div>
+          <div className="space-y-3.5">
+            {RECENT_ACTIVITIES.map((act) => (
+              <div key={act.id} className="flex items-start gap-3 p-2.5 rounded-xl bg-stone-50/70 border border-stone-100 hover:bg-stone-100/50 transition-all">
+                <div className="flex -space-x-2 shrink-0 pt-0.5">
+                  <img src={act.avatar1} alt="" className="h-7 w-7 rounded-full object-cover border-2 border-white" />
+                  {act.avatar2 && (
+                    <img src={act.avatar2} alt="" className="h-7 w-7 rounded-full object-cover border-2 border-white" />
+                  )}
                 </div>
-
-                <div className="flex items-center justify-between text-xs text-slate-400 border-t border-border pt-3">
-                  <span>Income: {c.profession?.income} LPA</span>
-                  <span className="font-bold text-primary group-hover:underline">View 360° Dossier →</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-stone-900 leading-snug">{act.text}</p>
+                  <p className="text-[11px] text-stone-500 mt-0.5">{act.detail}</p>
                 </div>
+                <span className="text-[10px] text-stone-400 font-medium shrink-0">{act.timestamp}</span>
               </div>
             ))}
           </div>
-        </section>
+        </div>
+
       </div>
+
+      {/* High Compatibility Matches (Horizontal Row of 6 Premium Matrimonial Profile Cards) */}
+      <div className="bg-white rounded-2xl border border-stone-200/80 shadow-2xs p-6 space-y-5">
+        <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+          <div>
+            <h2 className="font-serif font-bold text-lg text-stone-900">High Compatibility Matches</h2>
+            <p className="text-xs text-stone-500">Top candidate profiles scoring high on 12-dimension deterministic matching</p>
+          </div>
+          <button
+            onClick={() => router.push('/admin/matches')}
+            className="text-xs font-semibold text-rose-700 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
+          >
+            <span>View all matches</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* 6 Responsive Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {sampleMatchCards.map((item, idx) => {
+            const p = item.profile;
+            return (
+              <div key={idx} className="bg-stone-50/70 border border-stone-200/70 rounded-xl overflow-hidden shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col justify-between">
+                
+                {/* Profile Image & Badge */}
+                <div className="relative h-44 w-full bg-stone-200">
+                  <img src={p.photoUrl} alt={`${p.firstName} ${p.lastName}`} className="h-full w-full object-cover" />
+                  <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-700 text-white font-bold text-[11px] shadow-sm">
+                    {item.score}%
+                  </div>
+                </div>
+
+                {/* Profile Details */}
+                <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
+                  <div>
+                    <h3 className="font-serif font-bold text-sm text-stone-900 leading-tight">
+                      {p.firstName} {p.lastName}
+                    </h3>
+                    <p className="text-[11px] text-stone-500 font-medium mt-0.5">
+                      {p.age} • {p.city}
+                    </p>
+                  </div>
+
+                  <div className="text-[11px] space-y-0.5 text-stone-600 border-t border-stone-200/50 pt-2">
+                    <p className="font-semibold text-stone-800 truncate">{p.profession.designation}</p>
+                    <p className="text-[10px] text-stone-500 truncate">{p.education.degree}</p>
+                    <p className="text-[10px] text-rose-700 font-medium truncate">
+                      {p.religion} {p.jainSect ? `(${p.jainSect})` : ''}
+                    </p>
+                    <p className="text-[10px] text-stone-400">{p.maritalStatus}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-stone-200/50">
+                    <button
+                      onClick={() => router.push(`/admin/clients/${p.id}`)}
+                      className="w-full py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 text-[10px] font-semibold text-stone-700 transition-all cursor-pointer flex items-center justify-center gap-1"
+                    >
+                      <Eye className="h-3 w-3" />
+                      <span>View</span>
+                    </button>
+                    <button
+                      onClick={() => router.push(`/admin/matches?client=${p.id}`)}
+                      className="w-full py-1.5 rounded-lg bg-rose-700 hover:bg-rose-800 text-white text-[10px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
+                    >
+                      <Send className="h-3 w-3" />
+                      <span>Suggest</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Analytics Visuals Section (Match Funnel, Matches by Religion, Client Growth) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        {/* A. Match Funnel */}
+        <div className="bg-white rounded-2xl border border-stone-200/80 shadow-2xs p-5 space-y-4">
+          <div>
+            <h3 className="font-serif font-bold text-base text-stone-900">Match Funnel</h3>
+            <p className="text-[11px] text-stone-500">Pipeline conversion across matchmaking stages</p>
+          </div>
+          <div className="space-y-2 pt-1">
+            {ANALYTICS_DATA.funnel.map((item, idx) => {
+              const maxVal = ANALYTICS_DATA.funnel[0].count;
+              const pct = Math.round((item.count / maxVal) * 100);
+              return (
+                <div key={idx} className="space-y-1">
+                  <div className="flex justify-between text-[11px] font-medium text-stone-700">
+                    <span>{item.stage}</span>
+                    <span className="font-bold text-stone-900">{item.count}</span>
+                  </div>
+                  <div className="h-2 w-full bg-stone-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-rose-500 to-rose-700 rounded-full transition-all duration-500"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* B. Matches by Religion */}
+        <div className="bg-white rounded-2xl border border-stone-200/80 shadow-2xs p-5 space-y-4">
+          <div>
+            <h3 className="font-serif font-bold text-base text-stone-900">Matches by Religion</h3>
+            <p className="text-[11px] text-stone-500">Client demographic breakdown across bureau pool</p>
+          </div>
+          <div className="space-y-3 pt-2">
+            {ANALYTICS_DATA.byReligion.map((rel, idx) => (
+              <div key={idx} className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: rel.color }} />
+                  <span className="font-semibold text-stone-800">{rel.name}</span>
+                </div>
+                <span className="font-bold text-stone-900">{rel.percentage}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* C. Client Growth */}
+        <div className="bg-white rounded-2xl border border-stone-200/80 shadow-2xs p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-serif font-bold text-base text-stone-900">Client Growth</h3>
+              <p className="text-[11px] text-stone-500">Monthly new profile registrations</p>
+            </div>
+            <div className="flex items-center gap-1 text-emerald-600 text-xs font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
+              <TrendingUp className="h-3 w-3" />
+              <span>+14%</span>
+            </div>
+          </div>
+          <div className="flex items-end justify-between gap-2 h-40 pt-4 border-b border-stone-100">
+            {ANALYTICS_DATA.clientGrowth.map((g, idx) => {
+              const maxVal = 140;
+              const hPct = Math.round((g.clients / maxVal) * 100);
+              return (
+                <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                  <span className="text-[10px] font-bold text-stone-600">{g.clients}</span>
+                  <div
+                    className="w-full bg-rose-600/80 hover:bg-rose-700 rounded-t-md transition-all"
+                    style={{ height: `${hPct}%` }}
+                  />
+                  <span className="text-[10px] text-stone-400 font-medium">{g.month}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+      </div>
+
     </AdminLayout>
   );
 }
-

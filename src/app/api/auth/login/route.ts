@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { comparePassword, signToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 
@@ -34,7 +35,21 @@ export async function POST(request: Request) {
     };
 
     const token = signToken(sessionPayload);
+    const isHttps = request.headers.get('x-forwarded-proto') === 'https' || request.url.startsWith('https://');
 
+    // 1. Set on cookies() store for Next.js internal context
+    const cookieStore = await cookies();
+    cookieStore.set({
+      name: SESSION_COOKIE_NAME,
+      value: token,
+      httpOnly: true,
+      secure: isHttps,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
+    // 2. Set on NextResponse for browser HTTP headers
     const response = NextResponse.json({
       success: true,
       user: {
@@ -50,7 +65,7 @@ export async function POST(request: Request) {
       name: SESSION_COOKIE_NAME,
       value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isHttps,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
